@@ -262,6 +262,11 @@ section{padding:100px 8%;}
 .fg-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .form-btn{width:100%;padding:17px;margin-top:8px;background:var(--white);color:var(--deep);border:none;border-radius:3px;font-family:'Raleway',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:background .2s;}
 .form-btn:hover{background:var(--sage);color:var(--white);}
+.form-btn-wa{background:#25D366;color:var(--white);margin-top:10px;}
+.form-btn-wa:hover{background:#1da851;color:var(--white);}
+.form-status{margin-top:14px;font-family:'Raleway',sans-serif;font-size:13px;text-align:center;min-height:18px;}
+.form-status.ok{color:var(--sage);}
+.form-status.err{color:#c0392b;}
 
 /* ── FOOTER ── */
 footer{background:var(--ink);padding:72px 8% 36px;}
@@ -1151,24 +1156,29 @@ nav{animation:navDrop .6s cubic-bezier(.16,1,.3,1) both;}
       <div class="contact-form">
         <h3>Request a Free Quote</h3>
         <p class="f-sub">We'll get back to you within the hour.</p>
-        <div class="fg-row">
-          <div class="fg"><label>First Name</label><input type="text" placeholder="John"></div>
-          <div class="fg"><label>Last Name</label><input type="text" placeholder="Smith"></div>
-        </div>
-        <div class="fg"><label>Phone Number</label><input type="tel" placeholder="+61 4XX XXX XXX"></div>
-        <div class="fg"><label>Suburb / Area</label><input type="text" placeholder="e.g. Melbourne, Brisbane..."></div>
-        <div class="fg">
-          <label>Service Required</label>
-          <select>
-            <option value="">Select a service...</option>
-            <option>Commercial Clean</option>
-            <option>End of Lease Clean</option>
-            <option>Builders Clean</option>
-            <option>General Clean</option>
-          </select>
-        </div>
-        <div class="fg"><label>Message (Optional)</label><textarea placeholder="Tell us about your property or any special requirements..."></textarea></div>
-        <button class="form-btn">Request Free Quote →</button>
+        <form id="quoteForm" action="https://formspree.io/f/mbdvwkvr" method="POST">
+          <div class="fg-row">
+            <div class="fg"><label>First Name</label><input type="text" name="First Name" id="qFirst" placeholder="John" required></div>
+            <div class="fg"><label>Last Name</label><input type="text" name="Last Name" id="qLast" placeholder="Smith"></div>
+          </div>
+          <div class="fg"><label>Email</label><input type="email" name="Email" id="qEmail" placeholder="you@email.com" required></div>
+          <div class="fg"><label>Phone Number</label><input type="tel" name="Phone" id="qPhone" placeholder="+61 4XX XXX XXX" required></div>
+          <div class="fg"><label>Suburb / Area</label><input type="text" name="Suburb" id="qSuburb" placeholder="e.g. Melbourne, Brisbane..."></div>
+          <div class="fg">
+            <label>Service Required</label>
+            <select name="Service" id="qService">
+              <option value="">Select a service...</option>
+              <option>Commercial Clean</option>
+              <option>End of Lease Clean</option>
+              <option>Builders Clean</option>
+              <option>General Clean</option>
+            </select>
+          </div>
+          <div class="fg"><label>Message (Optional)</label><textarea name="Message" id="qMessage" placeholder="Tell us about your property or any special requirements..."></textarea></div>
+          <button type="submit" class="form-btn">Request Free Quote →</button>
+          <button type="button" class="form-btn form-btn-wa" id="quoteWaBtn">Send via WhatsApp</button>
+          <p class="form-status" id="quoteStatus"></p>
+        </form>
       </div>
     </div>
   </div>
@@ -1316,6 +1326,60 @@ nav{animation:navDrop .6s cubic-bezier(.16,1,.3,1) both;}
   if(prev)prev.onclick=()=>track.scrollBy({left:-card(),behavior:'smooth'});
   track.addEventListener('scroll',update,{passive:true});
   update();
+})();
+
+/* Quote form: Formspree submit + WhatsApp option */
+(function(){
+  const form=document.getElementById('quoteForm');
+  if(!form)return;
+  const status=document.getElementById('quoteStatus');
+  const waBtn=document.getElementById('quoteWaBtn');
+  const g=id=>(document.getElementById(id)?.value||'').trim();
+
+  function summary(){
+    const first=g('qFirst'), last=g('qLast'), email=g('qEmail'), phone=g('qPhone'),
+          suburb=g('qSuburb'), service=g('qService'), msg=g('qMessage');
+    let t='Hi Shine Group! I\'d like a free cleaning quote.\n\n';
+    t+='Name: '+first+(last?' '+last:'')+'\n';
+    if(email)t+='Email: '+email+'\n';
+    if(phone)t+='Phone: '+phone+'\n';
+    if(suburb)t+='Suburb: '+suburb+'\n';
+    if(service)t+='Service: '+service+'\n';
+    if(msg)t+='Details: '+msg+'\n';
+    return t;
+  }
+
+  /* WhatsApp button */
+  waBtn.addEventListener('click',function(){
+    if(!g('qFirst')||!g('qPhone')){
+      status.textContent='Please add your name and phone number first.';
+      status.className='form-status err';return;
+    }
+    window.open('https://wa.me/61485993519?text='+encodeURIComponent(summary()),'_blank');
+  });
+
+  /* Formspree email submit (AJAX, no page reload) */
+  form.addEventListener('submit',async function(e){
+    e.preventDefault();
+    status.textContent='Sending...';status.className='form-status';
+    try{
+      const res=await fetch(form.action,{
+        method:'POST',body:new FormData(form),
+        headers:{'Accept':'application/json'}
+      });
+      if(res.ok){
+        form.reset();
+        status.textContent='Thank you! We\'ll be in touch within the hour.';
+        status.className='form-status ok';
+      }else{
+        status.textContent='Something went wrong — please WhatsApp us instead.';
+        status.className='form-status err';
+      }
+    }catch(err){
+      status.textContent='Something went wrong — please WhatsApp us instead.';
+      status.className='form-status err';
+    }
+  });
 })();
 </script>
 
